@@ -72,8 +72,11 @@ public class TermFrequency extends Configured implements Tool {
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            // split line by a space character
+        	// split line by a space character
             String line = value.toString();
+            // first part of input is document number, extract it
+            int docNum = new Integer(line.substring(0, line.indexOf('\t')));
+            line = line.substring(line.indexOf('\t') + 1); // only use the words
             String[] words = line.split(" ");
             
             Map<String, Integer> wordCounts = new HashMap<>();
@@ -96,7 +99,7 @@ public class TermFrequency extends Configured implements Tool {
             
             // write (TermDocumentPair, score) for each word in the line
             for (Entry<String, Integer> entry : wordCounts.entrySet()) {
-                keyOut.set(entry.getKey(), (int)key.get());
+                keyOut.set(entry.getKey(), docNum);
                 DoubleWritable score = new DoubleWritable(.5 + .5 * (double)entry.getValue() / maxWordCount);
                 context.write(keyOut, score);
             }
