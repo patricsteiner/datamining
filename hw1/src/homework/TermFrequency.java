@@ -4,10 +4,12 @@ import homework.types.TermDocumentPair;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -16,6 +18,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class TermFrequency extends Configured implements Tool {
     public static void main(String[] args) throws Exception {
@@ -31,7 +36,7 @@ public class TermFrequency extends Configured implements Tool {
         }
 
         // create a MapReduce job (put your student id below!)
-        Job job = Job.getInstance(getConf(), "TermFrequency (<PUT YOUR STUDENT ID HERE>)");
+        Job job = Job.getInstance(getConf(), "TermFrequency (2017-81517)");
 
         // input
         job.setInputFormatClass(TextInputFormat.class);
@@ -54,8 +59,48 @@ public class TermFrequency extends Configured implements Tool {
         return job.waitForCompletion(true) ? 0 : -1;
     }
 
+    /**
+     * Mapper Implementation for TermFrequency Job
+     *
+     * Input:  key   - a document number (type: LongWritable)
+     *         value - each word in the document (type: Text)
+     * Output: key   - a word document pair (type: TermDocumentPair)
+     *         value - the TF score of this pair (type: DoubleWritable)
+     */
     public static class TFMapper extends Mapper<LongWritable, Text, TermDocumentPair, DoubleWritable> {
-        // fill your code here!
+    	private TermDocumentPair keyOut = new TermDocumentPair();
+
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+            // split line by a space character
+            String line = value.toString();
+            String[] words = line.split(" ");
+            
+            Map<String, Integer> wordCounts = new HashMap<>();
+            int maxWordCount = 0;
+            
+            for (String word : words) {
+            	// only count the word if it has not been counted yet
+            	if (!wordCounts.containsKey(word)) {
+	            	int wordCount = 0;
+	            	// count how many times each word occurs
+	            	for (String w : words) { 
+	            		if (word.equals(w)) wordCount++;
+	            	}
+	            	// save the maxWordCount to later calculate TF score
+	            	if (wordCount > maxWordCount) maxWordCount = wordCount;
+	            	// save the wordCount in map
+	            	wordCounts.put(word, wordCount);
+            	}
+            }
+            
+            // write (TermDocumentPair, score) for each word in the line
+            for (Entry<String, Integer> entry : wordCounts.entrySet()) {
+                keyOut.set(entry.getKey(), (int)key.get());
+                DoubleWritable score = new DoubleWritable(.5 + .5 * (double)entry.getValue() / maxWordCount);
+                context.write(keyOut, score);
+            }
+        }
     }
 }
 
