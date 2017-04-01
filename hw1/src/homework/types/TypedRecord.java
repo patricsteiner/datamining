@@ -92,9 +92,14 @@ public class TypedRecord implements Writable, Comparable<TypedRecord> {
         score = in.readDouble();
     }
 
+    @Override
+    public String toString() {
+    	return (type == RecordType.TF ? documentId + "\t" : "") + score;
+    }
+    
 	@Override
 	public int compareTo(TypedRecord other) {
-		return (int) (score*10000000 - other.score*10000000);
+		return (int) (other.score*10000000 - score*10000000);
 	}
 }
 

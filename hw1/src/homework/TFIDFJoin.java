@@ -116,9 +116,6 @@ public class TFIDFJoin extends Configured implements Tool {
      *         value  - IDFTF score of this pair (type: DoubleWritable)
      */
     public static class TFIDFReducer extends Reducer<Text, TypedRecord, TermDocumentPair, DoubleWritable> {
-    	//private Map<String, Double> idfScores = new HashMap<>();
-    	//private Map<String, Queue<TypedRecord>> tfScores = new HashMap<>();
-
     	TermDocumentPair keyOut = new TermDocumentPair();
     	DoubleWritable valueOut = new DoubleWritable();
     	
@@ -128,29 +125,18 @@ public class TFIDFJoin extends Configured implements Tool {
         @Override
         protected void reduce(Text key, Iterable<TypedRecord> values, Context context) throws IOException, InterruptedException {
             String word = key.toString();
-            System.out.print("XXXXX " + key.toString());
+
         	for (TypedRecord record : values) {
                 switch (record.getType()) {
                 case IDF: // happens only once per word
-                	System.out.print("   IDF : " + record.getScore() + " :: ");
-                	/*double idfScore = record.getScore();
-                	idfScores.put(word, idfScore);*/
                 	idfScore = record.getScore();
                 	break;
                 case TF: // can happen several times per word
-                	System.out.print("   TF: " + record.getScore() + " :: ");
-                	int documentId = record.getDocumentId();
-                	double tfScore = record.getScore();
-                    /*if (!tfScores.containsKey(word)) {
-                    	tfScores.put(word, new PriorityQueue<TypedRecord>());
-                    }
-                	tfScores.*/
-                	tfScores.add(record);
+                	tfScores.add(new TypedRecord(record)); // omg this took me forever, why do i need to use copy ctor?!?
                 	break;
                 }
             }
-        	System.out.println();
-
+        	
         	for (int i = 0; i < 10 && !tfScores.isEmpty(); i++) {
         		TypedRecord tr = tfScores.poll();
         		keyOut.set(word, tr.getDocumentId());
