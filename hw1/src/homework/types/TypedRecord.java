@@ -99,6 +99,7 @@ public class TypedRecord implements Writable, Comparable<TypedRecord> {
     
 	@Override
 	public int compareTo(TypedRecord other) {
+		// double to compare is really small, so multiply each number by 10000000 to get better result
 		return (int) (other.score*10000000 - score*10000000);
 	}
 }

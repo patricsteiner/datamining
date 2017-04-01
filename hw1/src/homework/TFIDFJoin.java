@@ -119,20 +119,18 @@ public class TFIDFJoin extends Configured implements Tool {
     	TermDocumentPair keyOut = new TermDocumentPair();
     	DoubleWritable valueOut = new DoubleWritable();
     	
-    	private double idfScore;
-    	private Queue<TypedRecord> tfScores = new PriorityQueue<>();
-    	
         @Override
         protected void reduce(Text key, Iterable<TypedRecord> values, Context context) throws IOException, InterruptedException {
-            String word = key.toString();
-
+        	double idfScore = -1; // will be changed as soon as IDF record is processed
+        	Queue<TypedRecord> tfScores = new PriorityQueue<>(); // use a minheap for ordering by tfScore
+        	String word = key.toString();
         	for (TypedRecord record : values) {
                 switch (record.getType()) {
                 case IDF: // happens only once per word
                 	idfScore = record.getScore();
                 	break;
                 case TF: // can happen several times per word
-                	tfScores.add(new TypedRecord(record)); // omg this took me forever, why do i need to use copy ctor?!?
+                	tfScores.add(new TypedRecord(record));
                 	break;
                 }
             }
