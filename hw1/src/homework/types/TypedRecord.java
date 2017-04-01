@@ -9,7 +9,7 @@ import java.io.IOException;
 /**
  * A class represents a record with type tag for join operation. This class contains either TF score or IDF score.
  */
-public class TypedRecord implements Writable {
+public class TypedRecord implements Writable, Comparable<TypedRecord> {
     public enum RecordType {
         TF, IDF
     }
@@ -91,5 +91,10 @@ public class TypedRecord implements Writable {
 
         score = in.readDouble();
     }
+
+	@Override
+	public int compareTo(TypedRecord other) {
+		return (int) (score*10000000 - other.score*10000000);
+	}
 }
 

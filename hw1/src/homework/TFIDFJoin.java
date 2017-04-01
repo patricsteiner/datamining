@@ -2,6 +2,11 @@ package homework;
 
 import homework.types.TermDocumentPair;
 import homework.types.TypedRecord;
+
+import java.io.IOException;
+import java.util.PriorityQueue;
+import java.util.Queue;
+
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -32,7 +37,7 @@ public class TFIDFJoin extends Configured implements Tool {
         }
 
         // create a MapReduce job (put your student id below!)
-        Job job = Job.getInstance(getConf(), "TFIDFJoin (<PUT YOUR STUDENT ID HERE>");
+        Job job = Job.getInstance(getConf(), "TFIDFJoin (2017-81517");
 
         // input & mapper
         job.setInputFormatClass(DelegatingInputFormat.class);
@@ -53,16 +58,106 @@ public class TFIDFJoin extends Configured implements Tool {
         return job.waitForCompletion(true) ? 0 : -1;
     }
 
+    /**
+     * TFMapper Implementation for TFIDFJoin Job
+     *
+     * Input:  key   - unused (type: LongWritable)
+     *         value - (word, document, tfScore) pair (type: Text)
+     * Output: key   - a word (type: Text)
+     *         value - a type value pair (type: TypedRecord)
+     */
     public static class TFMapper extends Mapper<LongWritable, Text, Text, TypedRecord> {
-        // fill your code here!
+    	private Text keyOut = new Text();
+    	private TypedRecord valueOut = new TypedRecord();
+
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        	// input is received as (word, document, tfScore) pair, separated by tab
+        	String[] input = value.toString().split("\t");
+        	String word = input[0];
+        	int document = new Integer(input[1]);
+        	double score = new Double(input[2]);
+        	keyOut.set(word);
+        	valueOut.setTFScore(document, score);
+            context.write(keyOut, valueOut);
+        }
     }
 
+    /**
+     * IDFMapper Implementation for TFIDFJoin Job
+     *
+     * Input:  key   - unused (type: LongWritable)
+     *         value - (word, idfScore) pair (type: Text)
+     * Output: key   - a word (type: Text)
+     *         value - a type value pair (type: TypedRecord)
+     */
     public static class IDFMapper extends Mapper<LongWritable, Text, Text, TypedRecord> {
-        // fill your code here!
+    	private Text keyOut = new Text();
+    	private TypedRecord valueOut = new TypedRecord();
+
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        	// input is received as (word, idfScore) pair, separated by tab
+        	String[] input = value.toString().split("\t");
+        	String word = input[0];
+        	double score = new Double(input[1]);
+        	keyOut.set(word);
+        	valueOut.setIDFScore(score);
+            context.write(keyOut, valueOut);
+        }
     }
 
+    /**
+     * Reducer Implementation for TFIDFJoin Job
+     *
+     * Input:  key    - a word (type: Text)
+     *         values - a list of TypedRecords (type: TypedRecord)
+     * Output: key    - a word document pair (type: TermDocumentPair)
+     *         value  - IDFTF score of this pair (type: DoubleWritable)
+     */
     public static class TFIDFReducer extends Reducer<Text, TypedRecord, TermDocumentPair, DoubleWritable> {
-        // fill your code here!
+    	//private Map<String, Double> idfScores = new HashMap<>();
+    	//private Map<String, Queue<TypedRecord>> tfScores = new HashMap<>();
+
+    	TermDocumentPair keyOut = new TermDocumentPair();
+    	DoubleWritable valueOut = new DoubleWritable();
+    	
+    	private double idfScore;
+    	private Queue<TypedRecord> tfScores = new PriorityQueue<>();
+    	
+        @Override
+        protected void reduce(Text key, Iterable<TypedRecord> values, Context context) throws IOException, InterruptedException {
+            String word = key.toString();
+            System.out.print("XXXXX " + key.toString());
+        	for (TypedRecord record : values) {
+                switch (record.getType()) {
+                case IDF: // happens only once per word
+                	System.out.print("   IDF : " + record.getScore() + " :: ");
+                	/*double idfScore = record.getScore();
+                	idfScores.put(word, idfScore);*/
+                	idfScore = record.getScore();
+                	break;
+                case TF: // can happen several times per word
+                	System.out.print("   TF: " + record.getScore() + " :: ");
+                	int documentId = record.getDocumentId();
+                	double tfScore = record.getScore();
+                    /*if (!tfScores.containsKey(word)) {
+                    	tfScores.put(word, new PriorityQueue<TypedRecord>());
+                    }
+                	tfScores.*/
+                	tfScores.add(record);
+                	break;
+                }
+            }
+        	System.out.println();
+
+        	for (int i = 0; i < 10 && !tfScores.isEmpty(); i++) {
+        		TypedRecord tr = tfScores.poll();
+        		keyOut.set(word, tr.getDocumentId());
+        		valueOut.set(tr.getScore() * idfScore);
+        		context.write(keyOut, valueOut);
+        	}
+        }
     }
 }
 

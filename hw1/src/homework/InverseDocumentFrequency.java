@@ -35,7 +35,7 @@ public class InverseDocumentFrequency extends Configured implements Tool {
         }
 
         // create a MapReduce job (put your student id below!)
-        Job job = Job.getInstance(getConf(), "InverseDocumentFrequency (<PUT YOUR STUDENT ID HERE>)");
+        Job job = Job.getInstance(getConf(), "InverseDocumentFrequency (2017-81517)");
 
         // input
         job.setInputFormatClass(TextInputFormat.class);
@@ -95,7 +95,7 @@ public class InverseDocumentFrequency extends Configured implements Tool {
     }
 
     /**
-     * Reducer Implementation for WordCount Job
+     * Reducer Implementation for InverseDocumentFrequency Job
      *
      * Input:  key    - a word (type: Text)
      *         values - a list of 1 (for each document the word occurs) (type: IntWritable)
